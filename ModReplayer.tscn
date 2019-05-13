@@ -1,0 +1,139 @@
+[gd_scene load_steps=10 format=2]
+
+[ext_resource path="res://ModReplayer.gd" type="Script" id=1]
+[ext_resource path="res://ELEKTORA.ttf" type="DynamicFontData" id=2]
+[ext_resource path="res://control.png" type="Texture" id=3]
+[ext_resource path="res://control-stop-square.png" type="Texture" id=4]
+[ext_resource path="res://control-eject.png" type="Texture" id=5]
+[ext_resource path="res://spelunkid_font.tres" type="BitmapFont" id=6]
+
+[sub_resource type="DynamicFont" id=1]
+size = 24
+outline_size = 1
+outline_color = Color( 0.564706, 0.658824, 1, 1 )
+use_filter = true
+extra_spacing_char = -1
+extra_spacing_space = 4
+font_data = ExtResource( 2 )
+
+[sub_resource type="AudioStreamGenerator" id=2]
+
+[sub_resource type="AudioStreamSample" id=3]
+
+[node name="ModReplayer" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Tabs" type="TabContainer" parent="."]
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -336.0
+margin_top = 16.0
+margin_right = -16.0
+margin_bottom = 576.0
+
+[node name="Bank0" type="Tabs" parent="Tabs"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 4.0
+margin_top = 32.0
+margin_right = -4.0
+margin_bottom = -4.0
+
+[node name="VBox" type="VBoxContainer" parent="Tabs/Bank0"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_bottom = -24.0
+
+[node name="Bank1" type="Tabs" parent="Tabs"]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 4.0
+margin_top = 32.0
+margin_right = -4.0
+margin_bottom = -4.0
+
+[node name="VBox" type="VBoxContainer" parent="Tabs/Bank1"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_bottom = -24.0
+
+[node name="lblTitle" type="Label" parent="."]
+margin_left = 24.0
+margin_top = 24.0
+margin_right = 336.0
+margin_bottom = 64.0
+custom_fonts/font = SubResource( 1 )
+text = "Godot Module replayer v.000"
+
+[node name="SamplePreview" type="AudioStreamPlayer" parent="."]
+stream = SubResource( 2 )
+
+[node name="FileDialog" type="FileDialog" parent="."]
+margin_left = 168.0
+margin_top = 121.0
+margin_right = 839.0
+margin_bottom = 462.0
+window_title = "Open a File"
+mode = 0
+access = 2
+filters = PoolStringArray( "*.mod", "" )
+show_hidden_files = true
+current_dir = "D:/Projects/godot/Code/gdsmod"
+current_path = "D:/Projects/godot/Code/gdsmod/"
+
+[node name="Buttons" type="HBoxContainer" parent="."]
+margin_left = 32.0
+margin_top = 67.0
+margin_right = 274.0
+margin_bottom = 91.0
+
+[node name="Play" type="Button" parent="Buttons"]
+margin_right = 99.0
+margin_bottom = 24.0
+text = "Play/Pause"
+icon = ExtResource( 3 )
+
+[node name="Stop" type="Button" parent="Buttons"]
+margin_left = 103.0
+margin_right = 161.0
+margin_bottom = 24.0
+text = "Stop"
+icon = ExtResource( 4 )
+
+[node name="Open" type="Button" parent="Buttons"]
+margin_left = 165.0
+margin_right = 242.0
+margin_bottom = 24.0
+text = "Open..."
+icon = ExtResource( 5 )
+
+[node name="AudioStreamPlayer2" type="AudioStreamPlayer" parent="."]
+stream = SubResource( 3 )
+
+[node name="SampleInfo" type="Label" parent="."]
+margin_left = 40.0
+margin_top = 103.0
+margin_right = 328.0
+margin_bottom = 254.0
+text = "Sample X:
+no data"
+
+[node name="Pattern" type="ItemList" parent="."]
+margin_left = 40.0
+margin_top = 224.0
+margin_right = 462.0
+margin_bottom = 573.0
+custom_fonts/font = ExtResource( 6 )
+custom_colors/guide_color = Color( 0.403922, 0.403922, 0.403922, 1 )
+select_mode = 1
+max_columns = 4
+same_column_width = true
+fixed_column_width = 96
+[connection signal="file_selected" from="FileDialog" to="." method="_on_FileDialog_file_selected"]
+[connection signal="pressed" from="Buttons/Open" to="." method="_on_Open_pressed"]
