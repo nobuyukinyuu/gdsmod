@@ -2,7 +2,7 @@
 
 This project is an experimental Amiga tracker module replayer implemented in pure GDScript.
 
-#Attributions
+# Attributions
 
 Some icons from Fugue icon set by Yusuke Kamiyamane.  Licensed under CC-BY 3.0.
 https://p.yusukekamiyamane.com/icons/search/fugue/
