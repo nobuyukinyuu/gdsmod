@@ -337,6 +337,7 @@ class Module:
 
 
 	func reset():
+		frames = 0 
 		position = 0
 		row = 0
 		tick = 0

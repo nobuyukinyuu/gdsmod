@@ -20,7 +20,6 @@ font_data = ExtResource( 2 )
 
 [sub_resource type="AudioStreamGenerator" id=3]
 mix_rate = 22050.0
-buffer_length = 1.0
 
 [node name="ModReplayer" type="Control"]
 anchor_right = 1.0
