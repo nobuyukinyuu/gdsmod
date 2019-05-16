@@ -19,8 +19,8 @@ font_data = ExtResource( 2 )
 [sub_resource type="AudioStreamGenerator" id=2]
 
 [sub_resource type="AudioStreamGenerator" id=3]
-mix_rate = 32000.0
-buffer_length = 2.0
+mix_rate = 22050.0
+buffer_length = 1.0
 
 [node name="ModReplayer" type="Control"]
 anchor_right = 1.0
@@ -118,7 +118,7 @@ icon = ExtResource( 5 )
 
 [node name="Player" type="AudioStreamPlayer" parent="."]
 stream = SubResource( 3 )
-volume_db = -8.578
+volume_db = -5.0
 
 [node name="SampleInfo" type="Label" parent="."]
 margin_left = 40.0

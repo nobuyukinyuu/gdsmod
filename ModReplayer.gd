@@ -36,7 +36,8 @@ func _process(delta):
 	#Do fill buffer if song is playing and it is requested.
 	if isPlaying:
 		fill_buffer()
-		$Orders.text = "%s\n%s" % [module.waited, module.frames]
+		$Orders.text = "%s\n%s" % [module.channels[3].working_effect,
+								   module.channels[3].volume_mod]
 
 
 func _physics_process(delta):
@@ -49,8 +50,9 @@ func _physics_process(delta):
 	$Pattern/Line2D.points = pts
 
 	
-func fill_buffer():
+func fill_buffer(var frames=-1):
 	var frames_to_fill = buf.get_frames_available()
+	if frames >=0:  frames_to_fill = frames
 	bufferdata = module.fill_buffer(frames_to_fill)
 #	while frames_to_fill > 0:
 #		buf.push_frame(Vector2(randf(), randf()))
@@ -59,11 +61,12 @@ func fill_buffer():
 	buf.push_buffer(bufferdata)
 
 	$PlaybackPosition.text = "Tick %s\n" % module.tick
-	$PlaybackPosition.text += "Row %s\nPattern%s" % [module.row, module.position]
+	$PlaybackPosition.text += "Row %s\nPattern %s" % [module.row, module.position]
 	
 #	while frames_to_fill > 0:
 ##		buf.push_frame()
 #		frames_to_fill -= 1
+
 
 func _on_Play_toggled(button_pressed):
 	isPlaying = button_pressed
@@ -77,6 +80,7 @@ func _on_Stop_pressed():
 	_on_Play_toggled(false)
 	module.reset()
 
+	buf.clear_buffer()
 
 func play_sample(num):
 	if !module.isReady:
@@ -115,7 +119,9 @@ func _on_FileDialog_file_selected(path):
 		for note in row:
 			$Pattern.add_item(note.get_info())
 
-
+	buf.clear_buffer()
+	fill_buffer($Player.stream.mix_rate * $Player.stream.buffer_length)
+	
 	$lblTitle.text = module.title
 
 	$Orders.text = "Orders:"
@@ -193,6 +199,8 @@ class Sample:
 			var a = ((b+128)%256) /128.0  -1
 			data.append(Vector2(a, a))
 		
+		#Now that we have sample data size, make sure the loop end doesn't exceed it
+		loop_end = min(loop_end, data.size())
 
 	#Get sample at position
 	func sample_at_position(pos):
@@ -202,12 +210,12 @@ class Sample:
 			if pos > data.size():
 				return Vector2.ZERO
 			else:
-				return data[pos] * (volume/64.0)
+				return data[pos] #* (volume/64.0)
 		else:  #Looping
 			if pos >= loop_end:
-				return data[ (int(pos) - loop_start) % loop_end ] * (volume/64.0)
+				return data[ (int(pos) - loop_start) % loop_end ] #* (volume/64.0)
 			else:
-				return data[int(pos)] * (volume/64.0)
+				return data[int(pos)] #* (volume/64.0)
 
 
 #Storage note
@@ -252,7 +260,14 @@ class Channel:
 	var currentSample:Sample  #Sample associated with current note
 		
 	var iteration_amt = 0  #How much to iterate position on next sampling
-		
+
+	#Working note / active tick modifiers
+	var volume_mod = 0
+	var pitch_mod = 1.0
+	var working_effect = "0"
+	var working_parameter = 0
+	
+
 	func nextSample(playback_rate=44100.0, peek=false):
 		if !note or !currentSample:  return Vector2.ZERO
 		if peek:  return currentSample.sample_at_position(pos)
@@ -261,7 +276,19 @@ class Channel:
 		if nextIteration != 0:  
 			iteration_amt = nextIteration
 		pos += iteration_amt
-		return currentSample.sample_at_position(pos)
+		
+		#TODO:  modify period based on effect changes
+		var samp = currentSample.sample_at_position(pos)
+		#Modify volume.
+		if working_effect == "C":  #Set volume
+			samp *= (volume_mod/64.0)
+		elif working_effect == "A":  #Volume slide.
+			samp *= clamp(note.volume + volume_mod, 0, 64) / 64.0
+		#TODO:  implement effects 5/6
+		else:  #Not under a volume command.  Use default volume.
+			samp * (note.volume/64.0)
+			
+		return samp
 	
 
 #Module data storage and retrival routines
@@ -281,13 +308,14 @@ class Module:
 	
 
 	#Playback system
-	var waited = 0
+	var waited = 0 #Number of frames processed this loop.
 	var frames = 0 #Playback offset in frames.
 	var playback_rate = 44100.0 setget set_playback_rate 
 
 	func set_playback_rate(val):
 		playback_rate = val
 		samples_per_tick = int(playback_rate * ticktime)
+
 
 	#Timer system
 	#Default speed is 6 ticks/row 125bpm. This corresponds to 384 ticks per pattern,
@@ -439,26 +467,24 @@ class Module:
 		var elapsed_time = nFrames / playback_rate
 
 		if frames == 0:  #First tick.  Make sure there's data here
-			for i in 4:
-				var note = patterns[orders[0]] [0] [i]
-				channels[i].note = note
-				channels[i].currentSample = sampleBank[note.instrument-1]
+			process_tick(0)
+#			for i in 4:
+#				var note = patterns[orders[0]] [0] [i]
+#				channels[i].note = note
+#				channels[i].currentSample = sampleBank[note.instrument-1]
 
-		#In case we get an absolutely huge buffer and need to skip ahead multiple tix
-#		while elapsed_time > ticktime:
-#			elapsed_time -= ticktime
-#			process_tick()  #Process next tick.
-		while waited > samples_per_tick:
-			waited -= samples_per_tick
-			process_tick()  #Process next tick.
-
-		waited += nFrames 
 		frames += nFrames
 
 		#Now that potential ticks are processed, get samples.
 		var arr = []  #PoolVector2Array of final output buffer
 		
 		while nFrames > 0:
+			#Have we filled enough frames for the clock to tick over?
+			if waited >= samples_per_tick:
+				waited -= samples_per_tick
+				process_tick()  #Process next tick.
+
+
 			var framedata = Vector2.ZERO
 #			for i in channels.size():
 			for i in channels.size():
@@ -467,13 +493,16 @@ class Module:
 				framedata += next_sample 
 			arr.append(framedata)
 			nFrames -=1
+			waited +=1
+			
+
 		
 		return arr
 
 
 	#Changes the channel information for the next tick when retreiving info for buf
-	func process_tick():
-		tick +=1
+	func process_tick(jump_forward=1):
+		tick += jump_forward
 		if tick >= speed:
 			#Next row.
 			row +=1
@@ -485,19 +514,108 @@ class Module:
 		if position >= positions_total:
 			position = 0
 			frames = 0
-		for i in 4:
-			
+
+		for i in 4:   #Process each channel
 			var note = patterns[orders[position]] [row] [i]
-			channels[i].note = note
-			if note != channels[i].lastNote:  #Notes changed between ticks.
-				var last = channels[i].lastNote
-				channels[i].lastNote = note
-				
-				if last and last.period > 0 and note.period != last.period:
+			if tick ==0:  #Process next row.
+				var last = channels[i].note
+				channels[i].lastNote = last
+				channels[i].note = note
+
+#				if note != channels[i].lastNote:  #Stop if still on the same tick
+				if last and note.period > 0 and note.period != last.period:
 					#Period value changed.  Reset channel carat position.
 					channels[i].pos = 0
+					channels[i].iteration_amt = 0
 				if note.instrument > 0:  #Change samples, the instrument changed.
 					channels[i].currentSample = sampleBank[note.instrument-1]
+					if note.period != 0:
+						channels[i].pos = 0
+						channels[i].iteration_amt = 0
+					else:
+						channels[i].volume_mod = 0
+#			if note.instrument > 0 and note.period == 0:  channels[i].volume_mod = 0
+					
+			process_tick_fx(i)  #Happens every tick.
+
+	#Called during a tick process, this updates a channel's working data.
+	func process_tick_fx(channel):
+		var ch = channels[channel]
+		var note = ch.note
+		
+		if !note:  return
+		
+		#TODO:  determine if the effect param continues from a previous row.
+		if note.effect != "0":  ch.working_effect = note.effect
+		
+		match note.effect:
+			"0":  #Arpeggio
+				if note.parameter == 0:  #No effect.  Reset working effect.
+					ch.working_effect = "0"
+					ch.volume_mod = 0
+					#Note: Don't reset params here.  Only the working effect.
+
+				else: #Do arpeggio.
+					pass #TODO
+					
+			"1":  #Portamento up
+				pass
+			"2":  #Portamento down
+				pass
+			"3":  #Tone Portamento
+				pass
+			"4":  #Vibrato
+				pass
+			"5":  #Portamento + Volume Slide
+				pass
+			"6":  #Vibrato + Volume Slide
+				pass
+			"7":  #Tremolo
+				pass
+			"8":  #ProTracker:  Unused.  /  FastTracker:  Set Pan
+				pass
+			"9":  #Set sample offset
+				var x = note.parameter >> 4
+				var y = note.parameter & 0xF
+				note.pos = x*4096 + y*256
+
+			"A":  #Volume slide
+				var x = note.parameter >> 4
+				var y = note.parameter & 0xF
+				if x>0:   
+					#If both columns are nonzero, it's technically ndefined behavior.
+					#modformat.txt says we should slide up anyway.
+					ch.volume_mod = max(64, ch.volume_mod + x)
+				elif y>0:
+					ch.volume_mod = min(0, ch.volume_mod - y)
+
+				
+				pass
+			"B":  #Position jump
+				var x = note.parameter >> 4
+				var y = note.parameter & 0xF
+				
+				#TODO:  Queue jump for next time tick == 0
+				
+			"C":  #Set volume
+				ch.volume_mod = note.parameter
+			"D":  #Pattern Break
+				#TODO:  Queue jump for next time tick == 0
+				pass
+
+			"E": #The big ugly mess.  TODO
+				pass
+				
+				
+			"F":  #Set Speed / Set Tempo
+				if note.parameter == 0:  pass
+				elif note.parameter < 32:
+					speed = note.parameter
+				else:
+					bpm = note.parameter
+					ticktime =   0.02 / (bpm / 125.0)  #Adjust tick time by bpm.
+					samples_per_tick = int(playback_rate * ticktime)
+							
 
 	#Check if this is a 4 channel module.
 	func is_supported_format(header_string):

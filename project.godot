@@ -23,6 +23,12 @@ config/icon="res://icon.png"
 
 global="*res://!globals.gd"
 
+[debug]
+
+gdscript/warnings/unused_variable=false
+gdscript/warnings/unused_class_variable=false
+gdscript/warnings/unused_argument=false
+
 [display]
 
 window/vsync/use_vsync=false
