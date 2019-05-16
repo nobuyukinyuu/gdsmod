@@ -23,6 +23,10 @@ config/icon="res://icon.png"
 
 global="*res://!globals.gd"
 
+[display]
+
+window/vsync/use_vsync=false
+
 [editor_plugins]
 
 enabled=PoolStringArray( "zoomy" )

@@ -11,9 +11,12 @@ const period_table = [
 const note_string = ['C-', 'C#', 'D-', 'D#', 'E-', 'F-',
 					 'F#', 'G-', 'G#', 'A-', 'A#', 'B-']
 
-#Finetune sample rate lookup table
+#Finetune sample rate lookup table.  NTSC, NOT PAL! FT2 standard. Most amigas use PAL
 const FINETUNE_FREQ = [8363,8413,8463,8529,8581,8651,8723,8757,
 						7895,7941,7985,8046,8107,8169,8232,8280]
+
+
+
 
 #Packs arbitrary bits into a big-endian int.  TODO:  little endian swap
 func packbits(bits):

@@ -18,7 +18,9 @@ font_data = ExtResource( 2 )
 
 [sub_resource type="AudioStreamGenerator" id=2]
 
-[sub_resource type="AudioStreamSample" id=3]
+[sub_resource type="AudioStreamGenerator" id=3]
+mix_rate = 32000.0
+buffer_length = 2.0
 
 [node name="ModReplayer" type="Control"]
 anchor_right = 1.0
@@ -96,6 +98,7 @@ margin_bottom = 91.0
 [node name="Play" type="Button" parent="Buttons"]
 margin_right = 99.0
 margin_bottom = 24.0
+toggle_mode = true
 text = "Play/Pause"
 icon = ExtResource( 3 )
 
@@ -113,8 +116,9 @@ margin_bottom = 24.0
 text = "Open..."
 icon = ExtResource( 5 )
 
-[node name="AudioStreamPlayer2" type="AudioStreamPlayer" parent="."]
+[node name="Player" type="AudioStreamPlayer" parent="."]
 stream = SubResource( 3 )
+volume_db = -8.578
 
 [node name="SampleInfo" type="Label" parent="."]
 margin_left = 40.0
@@ -135,5 +139,28 @@ select_mode = 1
 max_columns = 4
 same_column_width = true
 fixed_column_width = 96
+
+[node name="Line2D" type="Line2D" parent="Pattern"]
+points = PoolVector2Array( 40, 46, 190, 86, 330, 56 )
+width = 2.0
+
+[node name="Orders" type="Label" parent="."]
+margin_left = 480.0
+margin_top = 70.0
+margin_right = 630.0
+margin_bottom = 570.0
+text = "Orders:
+"
+
+[node name="PlaybackPosition" type="Label" parent="."]
+margin_left = 290.0
+margin_top = 70.0
+margin_right = 431.0
+margin_bottom = 90.0
+text = "Tick 0
+Row 0
+Pattern 0"
 [connection signal="file_selected" from="FileDialog" to="." method="_on_FileDialog_file_selected"]
+[connection signal="toggled" from="Buttons/Play" to="." method="_on_Play_toggled"]
+[connection signal="pressed" from="Buttons/Stop" to="." method="_on_Stop_pressed"]
 [connection signal="pressed" from="Buttons/Open" to="." method="_on_Open_pressed"]
