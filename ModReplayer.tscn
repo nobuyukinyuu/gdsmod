@@ -133,6 +133,7 @@ margin_left = 40.0
 margin_top = 103.0
 margin_right = 328.0
 margin_bottom = 254.0
+custom_fonts/font = ExtResource( 6 )
 text = "Sample X:
 no data"
 
@@ -207,15 +208,18 @@ align = 1
 valign = 1
 
 [node name="Pattern" parent="." instance=ExtResource( 7 )]
+anchor_right = 0.0
+anchor_bottom = 0.0
 margin_left = 50.0
 margin_top = 220.0
-margin_right = -524.0
-margin_bottom = -20.0
+margin_right = 500.0
+margin_bottom = 580.0
 
 [node name="Line2D" type="Line2D" parent="Pattern"]
 position = Vector2( 16, 64 )
 width = 2.0
 default_color = Color( 0.4, 0.501961, 1, 0.541176 )
+texture_mode = 1056964608
 [connection signal="file_selected" from="FileDialog" to="." method="_on_FileDialog_file_selected"]
 [connection signal="toggled" from="Buttons/Play" to="." method="_on_Play_toggled"]
 [connection signal="pressed" from="Buttons/Stop" to="." method="_on_Stop_pressed"]

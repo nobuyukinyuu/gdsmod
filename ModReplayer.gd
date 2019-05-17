@@ -37,8 +37,8 @@ func _process(delta):
 	#Do fill buffer if song is playing and it is requested.
 	if isPlaying:
 		fill_buffer()
-		$Orders.text = "%s\n%s" % [module.channels[3].working_effect,
-								   module.channels[3].volume_mod]
+#		$Orders.text = "%s\n%s" % [module.channels[3].working_effect,
+#								   module.channels[3].volume_mod]
 
 
 func _physics_process(delta):
@@ -58,18 +58,12 @@ func fill_buffer(var frames=-1):
 	var frames_to_fill = buf.get_frames_available()
 	if frames >=0:  frames_to_fill = frames
 	bufferdata = module.fill_buffer(frames_to_fill)
-#	while frames_to_fill > 0:
-#		buf.push_frame(Vector2(randf(), randf()))
-#		frames_to_fill -= 1
 
 	buf.push_buffer(bufferdata)
 
 	$PlaybackPosition.text = "Tick %s\n" % module.tick
 	$PlaybackPosition.text += "Row %s\nPattern %s" % [module.row, module.position]
 	
-#	while frames_to_fill > 0:
-##		buf.push_frame()
-#		frames_to_fill -= 1
 
 
 func _on_Play_toggled(button_pressed):
@@ -260,6 +254,8 @@ class Note:
 	#Mutates a worknote with an "empty" note's data if that data has new parameters.
 	#Returns true if shadowing went okay, and false if the note should be replaced.
 	func shadow_worknote(note):
+		#NOTE: Should I scrap worknotes entirely and just have an effect memory bank?
+		
 		if note.period>0:  
 			return false  #Tells the caller this note should be replaced instead.
 		if instrument == note.instrument:
