@@ -244,6 +244,7 @@ class Note:
 		return "%s %s %s%s" % [period2note(), instrument, 
 								effect, global.int2hex(parameter,2)]
 
+	#Gets this note's .... note value, as a string.
 	func period2note():
 		if period == 0: return "..."
 		var pos = global.period_table.find(period) 
@@ -256,8 +257,19 @@ class Note:
 			var octave = pos / 12
 			return global.note_string[pos%12] + String(octave)
 
-	func comparator(a,b):
-		return !(a<b)
+	#Mutates a worknote with an "empty" note's data if that data has new parameters.
+	#Returns true if shadowing went okay, and false if the note should be replaced.
+	func shadow_worknote(note):
+		if note.period>0:  
+			return false  #Tells the caller this note should be replaced instead.
+		if instrument == note.instrument:
+			#Explicitly specifying the instrument usually means "string popping"
+			#Effect is wanted.  So, we reset the volume to its default.
+			pass
+			
+		#TODO:  all the other parameters
+		
+		return true  #Shadowing was okay to perform.
 
 	#Gets the native sampling Hz rate needed to produce iteration value
 	const CLOCK_SPEED = 7093789.2   #m68k running at 7.09 MHz (PAL)
@@ -297,10 +309,10 @@ class Channel:
 		if working_effect == "C":  #Set volume
 			samp *= (volume_mod/64.0)
 		elif working_effect == "A":  #Volume slide.
-			samp *= clamp(note.volume + volume_mod, 0, 64) / 64.0
+			samp *= clamp(currentSample.volume + volume_mod, 0, 64) / 64.0
 		#TODO:  implement effects 5/6
 		else:  #Not under a volume command.  Use default volume.
-			samp * (note.volume/64.0)
+			samp * (currentSample.volume/64.0)
 			
 		return samp
 	
