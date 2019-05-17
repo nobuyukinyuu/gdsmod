@@ -1,0 +1,183 @@
+[gd_scene load_steps=3 format=2]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends Control
+var font:BitmapFont = preload(\"res://spelunkid_font.tres\")
+
+const TILE_SIZE = Vector2(8,12)
+var fullwidth = TILE_SIZE.x*13*4 + TILE_SIZE.x
+
+var highlight_color = ColorN(\"blue\", 0.3)
+
+var active_row = -1
+
+func _ready():
+	update_texture()
+	pass
+
+
+
+func bind(module):
+	module.connect(\"row_changed\", self, \"change_row\")
+	module.connect(\"pattern_changed\", self, \"change_pattern\")
+
+
+func change_row(row):
+	active_row = row
+	var pos = active_row * TILE_SIZE.y
+	$C.get_v_scrollbar().value = pos - $C.rect_size.y / 2
+
+
+	$C/v/Cursor.rect_position.y = pos 
+
+
+func change_pattern(order, pattern):
+#	$Content.pattern = pattern
+
+	var p = []
+	#Cache pattern strings.
+	for y in pattern.size():
+		var row = pattern[y]
+		var output_row = []
+		for i in 4:
+			var note = row[i]
+			var cell = []
+			cell.append( global.period2note(note.period) + \" \" )
+			cell.append( str(note.instrument).pad_zeros(2) )
+			cell.append( \"...\" )  #Volume column?
+
+			cell.append( note.effect )
+			cell.append( global.int2hex(note.parameter, 2))
+
+			output_row.append(cell)
+		p.append(output_row)
+
+	$C/v/v/Content.patternStrings = p
+
+
+
+	update_texture()
+	
+#Call to get updated texture from viewport.
+func update_texture():
+	$C/v/v/Content.visible = true
+	yield(get_tree(),\"idle_frame\")
+	$C/v/v.update_worlds()
+
+	yield(get_tree(),\"idle_frame\")
+	$C/v/v/Content.visible = false
+#	$C/v/v.render_target_update_mode = Viewport.UPDATE_DISABLED
+
+#	yield(get_tree(),\"idle_frame\")
+#	yield(get_tree(),\"idle_frame\")
+
+
+	# Retrieve a captured image from the viewport texture using get_data().
+	var img = $C/v/v.get_texture().get_data()
+	# Flip on the y axis.
+	img.flip_y()
+	# Convert Image to ImageTexture.
+	var tex = ImageTexture.new()
+	tex.create_from_image(img)
+	# Set Sprite Texture.
+	$C/v.texture = tex
+
+"
+
+[sub_resource type="GDScript" id=2]
+script/source = "extends Control
+var patternStrings
+
+func _draw():
+	var active_row = owner.active_row
+#	var highlight_color = owner.highlight_color
+	var TILE_SIZE = owner.TILE_SIZE
+	var fullwidth = owner.fullwidth
+	var font = owner.font
+
+	var first_tile = TILE_SIZE * Vector2(3, 0)
+	
+#	#Draw active row
+#	if active_row >=0:
+#		draw_rect(Rect2(0, active_row*TILE_SIZE.y, fullwidth, TILE_SIZE.y), highlight_color)
+
+	#Draw grid.
+	draw_rect(Rect2(0,0, fullwidth, 64*TILE_SIZE.y), ColorN(\"darkgray\", 0.25), false)
+	draw_line(Vector2(TILE_SIZE.x*2, 0), Vector2(TILE_SIZE.x*2, 64* TILE_SIZE.y), ColorN(\"gray\"))
+	for i in 4:
+		var x = TILE_SIZE.x*2 + TILE_SIZE.x*i*13
+		draw_line(Vector2(x, 0), Vector2(x,TILE_SIZE.y*64), ColorN(\"darkgray\", 0.5))
+	
+	#Draw row labels.  Assume column is 12chars large.
+	for i in 64:
+		var label_fg = ColorN(\"yellow\") if i % 4 == 0 else ColorN(\"gray\")
+
+		if i % 4 == 0:
+			draw_rect(Rect2(0, i*TILE_SIZE.y, fullwidth, TILE_SIZE.y), ColorN(\"black\", 0.25))
+
+		draw_string(font, Vector2(0, i*TILE_SIZE.y), str(i).pad_zeros(2), label_fg)
+
+	#Draw pattern.
+		if patternStrings !=null:
+			for y in patternStrings.size():
+				var row = patternStrings[y]
+				for i in 4:
+					var cell = row[i]
+					var tilepos = first_tile + Vector2(13*i, y) * TILE_SIZE
+					
+					var dark_col = Color(0.2,0.2,0.2)
+					draw_string(font, tilepos, cell[0], dark_col if cell[0].strip_edges() == \"...\" else ColorN(\"white\"))
+
+					#Instrument
+					if int(cell[1]) > 0:
+						draw_string(font, tilepos+Vector2(3,0)*TILE_SIZE, cell[1], ColorN('orchid'))
+					else:
+						draw_string(font, tilepos+Vector2(3,0)*TILE_SIZE, \"..\", dark_col)
+
+					#Volume
+#					draw_string(font, tilepos+Vector2(5,0)*TILE_SIZE, cell[2], dark_col)
+					draw_string(font, tilepos+Vector2(5,0)*TILE_SIZE, \"--\", dark_col)
+
+					#Effect
+					if int(cell[4])>0 or (cell[3]!=\"\" and cell[3]!=\"0\"):
+#						prints(\"OK OK.\", cell[3], cell[4])
+						draw_string(font, tilepos+Vector2(8,0)*TILE_SIZE, cell[3]+cell[4], ColorN(\"salmon\"))
+					elif (cell[3]==\"0\" and int(cell[4])>0):
+						draw_string(font, tilepos+Vector2(8,0)*TILE_SIZE, cell[3]+cell[4], ColorN(\"salmon\"))
+					else:
+						draw_string(font, tilepos+Vector2(8,0)*TILE_SIZE, \"...\", dark_col)
+"
+
+[node name="PatternView" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = SubResource( 1 )
+
+[node name="C" type="ScrollContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="v" type="TextureRect" parent="C"]
+
+[node name="Cursor" type="ColorRect" parent="C/v"]
+show_behind_parent = true
+anchor_right = 1.0
+margin_bottom = 12.0
+rect_min_size = Vector2( 0, 12 )
+color = Color( 0, 0.215686, 0.588235, 0.247059 )
+
+[node name="v" type="Viewport" parent="C/v"]
+size = Vector2( 432, 768 )
+own_world = true
+transparent_bg = true
+handle_input_locally = false
+disable_3d = true
+usage = 0
+render_target_update_mode = 3
+gui_disable_input = true
+
+[node name="Content" type="Control" parent="C/v/v"]
+margin_right = 432.0
+margin_bottom = 768.0
+rect_min_size = Vector2( 432, 768 )
+script = SubResource( 2 )

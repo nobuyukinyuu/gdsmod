@@ -30,6 +30,7 @@ func _ready():
 	buf = $Player.get_stream_playback()
 	module.playback_rate = $Player.stream.mix_rate
 
+	$Pattern.bind(module)
 	_on_FileDialog_file_selected("res://test.mod")
 
 func _process(delta):
@@ -47,7 +48,10 @@ func _physics_process(delta):
 		if i > 512:  break
 		var p = bufferdata[i].x
 		pts.append(Vector2(pts.size(), 64 + p*64))
-	$Pattern/Line2D.points = pts
+	if !bufferdata.empty():  
+		$Pattern/Line2D.points = pts
+	else:
+		$Pattern/Line2D.points = [Vector2(0,64), Vector2(8*13,64)]
 
 	
 func fill_buffer(var frames=-1):
@@ -80,6 +84,8 @@ func _on_Stop_pressed():
 	_on_Play_toggled(false)
 	module.reset()
 
+	$Player.stop()
+	yield (get_tree(), "idle_frame")
 	buf.clear_buffer()
 
 func play_sample(num):
@@ -111,16 +117,16 @@ func _on_Open_pressed():
 func _on_FileDialog_file_selected(path):
 	module.load_module(path)
 
-	$Pattern.clear()
-	for i in 4:
-		$Pattern.add_item("Channel %s" % (i+1), null, false)
-		
-	for row in module.patterns[0]:
-		for note in row:
-			$Pattern.add_item(note.get_info())
-
+#	$Pattern.clear()
+#	for i in 4:
+#		$Pattern.add_item("Channel %s" % (i+1), null, false)
+#
+#	for row in module.patterns[0]:
+#		for note in row:
+#			$Pattern.add_item(note.get_info())
+	$Player.stop()
 	buf.clear_buffer()
-	fill_buffer($Player.stream.mix_rate * $Player.stream.buffer_length)
+#	fill_buffer($Player.stream.mix_rate * $Player.stream.buffer_length)
 	
 	$lblTitle.text = module.title
 
@@ -226,9 +232,17 @@ class Note:
 	var effect = ""
 	var parameter = 0
 	
+	func duplicate():
+		var p = Note.new()
+		p.instrument = instrument
+		p.period = period
+		p.volume = volume
+		p.effect = effect
+		p.parameter = parameter
+	
 	func get_info():
 		return "%s %s %s%s" % [period2note(), instrument, 
-								effect, global.int2hex(parameter)]
+								effect, global.int2hex(parameter,2)]
 
 	func period2note():
 		if period == 0: return "..."
@@ -299,6 +313,9 @@ class Module:
 	var patterns = []
 	var channels = [Channel.new(), Channel.new(), Channel.new(), Channel.new()]
 
+	signal row_changed(idx)
+	signal pattern_changed(order_pos, patterndata)
+	
 	
 	#Mod info
 	var title = ""
@@ -331,22 +348,26 @@ class Module:
 	var ticktime =   0.02 / (bpm / 125.0)  #Adjust tick time by bpm.
 	var samples_per_tick = int(playback_rate * ticktime)
 
+	var break_to_position:ModPosition  #This is non-null when queued by an effect
 	var position = 0
 	var row = 0
 	var tick = 0
 
 
-	func reset():
+	func reset(emit_change = true):
 		frames = 0 
 		position = 0
 		row = 0
 		tick = 0
 		channels = [Channel.new(), Channel.new(), Channel.new(), Channel.new()]
-		
+
+		if emit_change:
+			emit_signal("pattern_changed", 0, patterns[orders[0]])
+			emit_signal("row_changed",0)
+
 	func load_module(path):
-		position = 0
-		row = 0
-		tick = 0
+		reset(false)  #Signals are emitted after loading the mod in.
+
 		
 		var f = File.new()
 		f.open(path, File.READ)
@@ -458,6 +479,10 @@ class Module:
 			s.cache_generator_data()	#Create native sample data for generator
 	
 		f.close()
+		#Emit the signals now that the mod's loaded.
+		emit_signal("pattern_changed", 0, patterns[orders[0]])
+		emit_signal("row_changed",0)
+
 		isReady = true
 
 
@@ -480,24 +505,22 @@ class Module:
 		var arr = []  #PoolVector2Array of final output buffer
 		
 		while nFrames > 0:
-			#Have we filled enough frames for the clock to tick over?
-			if waited >= samples_per_tick:
-				waited -= samples_per_tick
-				process_tick()  #Process next tick.
-
-
 			var framedata = Vector2.ZERO
-#			for i in channels.size():
 			for i in channels.size():
-				var next_sample= channels[i].nextSample(playback_rate)/channels.size()
+				var next_sample= channels[i].nextSample(playback_rate)
+				next_sample /= channels.size()  #Lower the volume to mix.
 				#Mix the 4 channels together.
 				framedata += next_sample 
 			arr.append(framedata)
 			nFrames -=1
 			waited +=1
-			
 
-		
+			#Have we filled enough frames for the clock to tick over?
+			if waited >= samples_per_tick:
+				waited -= samples_per_tick
+				process_tick()  #Process next tick.
+
+		#Frames and ticks processed.  Return buffer.
 		return arr
 
 
@@ -508,13 +531,34 @@ class Module:
 			#Next row.
 			row +=1
 			tick = 0
+			if row < 64:  emit_signal("row_changed", row)
 		if row >= 64:
 			#Next pattern in order.
 			position +=1
 			row = 0
-		if position >= positions_total:
+			if position < positions_total:
+				emit_signal("pattern_changed", position, patterns[orders[position]])
+			emit_signal("row_changed", row)
+		if position >= positions_total:  #Passed end of song.  Restart.		
 			position = 0
 			frames = 0
+			emit_signal("pattern_changed", position, patterns[orders[position]])
+
+		#A previous row performed a position jump or pattern break.
+		if break_to_position and tick ==0:
+			var position_changed = position == break_to_position.position
+
+			position = break_to_position.position
+			row = break_to_position.row
+			tick = break_to_position.tick
+			
+			if break_to_position.should_emit_signal:
+				if position_changed:
+					emit_signal("pattern_changed", position, 
+								 patterns[orders[position]])
+				emit_signal("row_changed", row)
+			break_to_position = null
+
 
 		for i in 4:   #Process each channel
 			var note = patterns[orders[position]] [row] [i]
@@ -530,10 +574,12 @@ class Module:
 					channels[i].iteration_amt = 0
 				if note.instrument > 0:  #Change samples, the instrument changed.
 					channels[i].currentSample = sampleBank[note.instrument-1]
+
 					if note.period != 0:
 						channels[i].pos = 0
 						channels[i].iteration_amt = 0
 					else:
+						#No note here, but instrument.  Reset volume
 						channels[i].volume_mod = 0
 #			if note.instrument > 0 and note.period == 0:  channels[i].volume_mod = 0
 					
@@ -593,16 +639,28 @@ class Module:
 				
 				pass
 			"B":  #Position jump
-				var x = note.parameter >> 4
-				var y = note.parameter & 0xF
+				#Queue jump for next time tick == 0
+				var pos = ModPosition.new()
 				
-				#TODO:  Queue jump for next time tick == 0
+				pos.should_emit_signal = true
+				pos.position = note.parameter
+				break_to_position = pos
 				
 			"C":  #Set volume
 				ch.volume_mod = note.parameter
+
 			"D":  #Pattern Break
-				#TODO:  Queue jump for next time tick == 0
-				pass
+				var x = note.parameter >> 4
+				var y = note.parameter & 0xF
+
+				#Queue jump for next time tick == 0
+				var pos = ModPosition.new()
+				
+				pos.should_emit_signal = true
+				pos.position = position + 1
+				pos.row = x*10+y
+				break_to_position = pos
+				
 
 			"E": #The big ugly mess.  TODO
 				pass
@@ -628,6 +686,7 @@ class Module:
 
 #Transport and storage class for arbitrary tick position in a mod.
 class ModPosition:
+	var should_emit_signal = false #Signal emission for pattern/row change necessary.
 	var position = 0  #Pattern position in order
 	var row = 0
 	var tick = 0

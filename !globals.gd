@@ -29,9 +29,11 @@ func packbits(bits):
 	return output
 
 #Converts decimal integer to a hex string.
-func int2hex(n):
+func int2hex(n, pad=0):
 	assert typeof(n) == TYPE_INT
 	var hexaDeciNum:PoolByteArray = PoolByteArray([])
+	
+	if n == 0: hexaDeciNum.append(48)
 	
 	while n != 0:
 		var temp = n % 16
@@ -43,6 +45,10 @@ func int2hex(n):
 		
 		n /= 16  #Next digit
 		
+	
+	while pad-hexaDeciNum.size()>0:
+		hexaDeciNum.append(48)
+		pad -=1
 	hexaDeciNum.invert()
 	return hexaDeciNum.get_string_from_ascii()
 		
@@ -178,3 +184,16 @@ func mod2impulse_effect(note, cmd):
 			else:   #tempo
 				note.command='T'
 			
+
+#Converts a period value to a note string.
+func period2note(period):
+	if period == 0: return "..."
+	var pos = period_table.find(period) 
+#		var pos = global.period_table.bsearch_custom(period, self, "comparator") 
+	if pos == -1:
+		#Finetune value has messed with this, figure out a better way
+		#To determine the closest note instead.  TODO
+		return "???"  
+	else:
+		var octave = pos / 12
+		return note_string[pos%12] + String(octave)
