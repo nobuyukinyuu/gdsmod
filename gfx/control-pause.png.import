@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/control-stop-square.png-e336204a569b9a8fcd1f0bd6252f06bf.stex"
+path="res://.import/control-pause.png-63340f3a45bfe1406193533aeb999083.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://control-stop-square.png"
-dest_files=[ "res://.import/control-stop-square.png-e336204a569b9a8fcd1f0bd6252f06bf.stex" ]
+source_file="res://gfx/control-pause.png"
+dest_files=[ "res://.import/control-pause.png-63340f3a45bfe1406193533aeb999083.stex" ]
 
 [params]
 

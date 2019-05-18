@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/control.png-7ffb8cf4e91ab56d5a9ddbb29611d610.stex"
+path="res://.import/control-stop-square.png-10a8e89d07eb97dadca442bfebb9725d.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://control.png"
-dest_files=[ "res://.import/control.png-7ffb8cf4e91ab56d5a9ddbb29611d610.stex" ]
+source_file="res://gfx/control-stop-square.png"
+dest_files=[ "res://.import/control-stop-square.png-10a8e89d07eb97dadca442bfebb9725d.stex" ]
 
 [params]
 

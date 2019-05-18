@@ -2,11 +2,11 @@
 
 [ext_resource path="res://ModReplayer.gd" type="Script" id=1]
 [ext_resource path="res://ELEKTORA.ttf" type="DynamicFontData" id=2]
-[ext_resource path="res://control.png" type="Texture" id=3]
-[ext_resource path="res://control-stop-square.png" type="Texture" id=4]
-[ext_resource path="res://control-eject.png" type="Texture" id=5]
+[ext_resource path="res://gfx/control.png" type="Texture" id=3]
+[ext_resource path="res://gfx/control-stop-square.png" type="Texture" id=4]
+[ext_resource path="res://gfx/control-eject.png" type="Texture" id=5]
 [ext_resource path="res://spelunkid_font.tres" type="BitmapFont" id=6]
-[ext_resource path="res://cross.png" type="Texture" id=7]
+[ext_resource path="res://gfx/cross.png" type="Texture" id=7]
 [ext_resource path="res://PatternView.tscn" type="PackedScene" id=8]
 
 [sub_resource type="DynamicFont" id=1]
@@ -81,7 +81,7 @@ margin_top = 24.0
 margin_right = 336.0
 margin_bottom = 64.0
 custom_fonts/font = SubResource( 1 )
-text = "Godot Module replayer v.000"
+text = "Godot Module replayer v.02"
 
 [node name="SamplePreview" type="AudioStreamPlayer" parent="."]
 stream = SubResource( 2 )

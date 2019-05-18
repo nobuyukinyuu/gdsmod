@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/control-eject.png-9c3fdcd8829738d2e14fac045fa9de74.stex"
+path="res://.import/cross.png-864cb0ab68b1dc36f5f1c15cc982485f.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://control-eject.png"
-dest_files=[ "res://.import/control-eject.png-9c3fdcd8829738d2e14fac045fa9de74.stex" ]
+source_file="res://gfx/cross.png"
+dest_files=[ "res://.import/cross.png-864cb0ab68b1dc36f5f1c15cc982485f.stex" ]
 
 [params]
 
