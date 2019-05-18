@@ -408,6 +408,12 @@ class Module:
 		position = 0
 		row = 0
 		tick = 0
+
+		speed = 6  #Ticks per row
+		bpm = 125  #Beats per minute (kinda)
+		ticktime =   0.02 / (bpm / 125.0)  #Adjust tick time by bpm.
+		samples_per_tick = int(playback_rate * ticktime)
+		
 		channels = [Channel.new(), Channel.new(), Channel.new(), Channel.new()]
 
 		if emit_change:
@@ -446,7 +452,7 @@ class Module:
 	
 		#Read 30 samples here (1..31).  TODO: Detect if 15-sample mod only somehow..
 		sampleBank.clear()
-		for i in range(30):
+		for i in range(31):
 			var samp = Sample.new()
 			samp.init_header(f.get_buffer(30))
 			sampleBank.append(samp)
@@ -607,9 +613,8 @@ class Module:
 			tick = break_to_position.tick
 			
 			if break_to_position.should_emit_signal:
-#				if position_changed:
-#					emit_signal("pattern_changed", position, 
-#								 patterns[orders[position]])
+
+				#TODO:  Sanitize me.  Can crash with invalid position pointers
 				emit_signal("pattern_changed", position, patterns[orders[position]])
 				emit_signal("row_changed", row)
 			break_to_position = null
@@ -621,7 +626,10 @@ class Module:
 			if tick ==0:  #Row changed.  Process new notes.
 				#First change samples if a new note was played.
 				if note.instrument > 0 and note.period > 0:  
-					channels[i].currentSample = sampleBank[note.instrument-1]
+					if note.instrument-1 < sampleBank.size():
+						channels[i].currentSample = sampleBank[note.instrument-1]
+					else:
+						channels[i].currentSample = null
 					channels[i].pos = 0
 					channels[i].iteration_amt = 0
 

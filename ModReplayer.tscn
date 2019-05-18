@@ -128,7 +128,7 @@ icon = ExtResource( 5 )
 
 [node name="Player" type="AudioStreamPlayer" parent="."]
 stream = SubResource( 3 )
-volume_db = -5.0
+volume_db = -1.784
 
 [node name="SampleInfo" type="Label" parent="."]
 margin_left = 40.0
