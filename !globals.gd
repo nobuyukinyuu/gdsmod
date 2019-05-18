@@ -6,8 +6,10 @@ const period_table = [
 	428,404,381,360,339,320,302,285,269,254,240,226,
 	214,202,190,180,170,160,151,143,135,127,120,113,
 	107,101,95,90,85,80,75,71,67,63,60,56,
-	53,50,47,45,42,40,37,35,33,31,30,28
-	]
+	53,50,47,45,42,40,37,35,33,31,30,28,
+	26,25,23,22,21,20,18,17,16,
+	]  #The last line of values is UNOFFICIAL and only used for OpenMPT compatibility!
+	
 const note_string = ['C-', 'C#', 'D-', 'D#', 'E-', 'F-',
 					 'F#', 'G-', 'G#', 'A-', 'A#', 'B-']
 
@@ -16,6 +18,35 @@ const FINETUNE_FREQ = [8363,8413,8463,8529,8581,8651,8723,8757,
 						7895,7941,7985,8046,8107,8169,8232,8280]
 
 
+#Gets the native sampling Hz rate needed to produce iteration value
+const CLOCK_SPEED = 7093789.2   #m68k running at 7.09 MHz (PAL)
+func get_sample_rate(period):
+	if period == 0:  return 0
+	return CLOCK_SPEED / float(period*2)
+
+
+func bsearch_closest(arr, l, r, x): 
+	# Check base case 
+	var mid:int = l + (r - l)/2
+	if r >= l: 
+  
+		# If element is present at the middle itself 
+		if arr[mid] == x: 
+			return mid 
+		  
+		# If element is smaller than mid, then it  
+		# can only be present in left subarray 
+		elif arr[mid] > x: 
+			return bsearch_closest(arr, mid + 1, r, x)   
+		# Else the element can only be present  
+		# in right subarray 
+		else: 
+			return bsearch_closest(arr, l, mid-1, x) 
+			
+  
+	else: 
+		# Element is not present in the array.  Return closest value
+		return mid
 
 
 #Packs arbitrary bits into a big-endian int.  TODO:  little endian swap

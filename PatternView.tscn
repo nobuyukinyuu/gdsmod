@@ -49,6 +49,7 @@ func change_pattern(order, pattern):
 			cell.append( note.effect )
 			cell.append( global.int2hex(note.parameter, 2))
 
+			cell.append(note.parameter)  
 			output_row.append(cell)
 		p.append(output_row)
 
@@ -139,11 +140,11 @@ func _draw():
 					draw_string(font, tilepos+Vector2(5,0)*TILE_SIZE, \"--\", dark_col)
 
 					#Effect
-					if int(cell[4])>0 or (cell[3]!=\"\" and cell[3]!=\"0\"):
+					if  (cell[3]!=\"\" and cell[3]!=\"0\"):
 #						prints(\"OK OK.\", cell[3], cell[4])
 						draw_string(font, tilepos+Vector2(8,0)*TILE_SIZE, cell[3]+cell[4], ColorN(\"salmon\"))
-					elif (cell[3]==\"0\" and int(cell[4])>0):
-						draw_string(font, tilepos+Vector2(8,0)*TILE_SIZE, cell[3]+cell[4], ColorN(\"salmon\"))
+					elif (cell[3]==\"0\" and int(cell[5])>0):
+						draw_string(font, tilepos+Vector2(8,0)*TILE_SIZE, cell[3]+cell[4], ColorN(\"aquamarine\"))
 					else:
 						draw_string(font, tilepos+Vector2(8,0)*TILE_SIZE, \"...\", dark_col)
 "

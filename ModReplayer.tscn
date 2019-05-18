@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=2]
+[gd_scene load_steps=13 format=2]
 
 [ext_resource path="res://ModReplayer.gd" type="Script" id=1]
 [ext_resource path="res://ELEKTORA.ttf" type="DynamicFontData" id=2]
@@ -6,7 +6,8 @@
 [ext_resource path="res://control-stop-square.png" type="Texture" id=4]
 [ext_resource path="res://control-eject.png" type="Texture" id=5]
 [ext_resource path="res://spelunkid_font.tres" type="BitmapFont" id=6]
-[ext_resource path="res://PatternView.tscn" type="PackedScene" id=7]
+[ext_resource path="res://cross.png" type="Texture" id=7]
+[ext_resource path="res://PatternView.tscn" type="PackedScene" id=8]
 
 [sub_resource type="DynamicFont" id=1]
 size = 24
@@ -23,12 +24,13 @@ font_data = ExtResource( 2 )
 mix_rate = 22050.0
 
 [sub_resource type="StyleBoxFlat" id=4]
+content_margin_left = 4.0
 bg_color = Color( 0.6, 0.6, 0.6, 0.0352941 )
-border_width_left = 1
-border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color( 0.8, 0.8, 0.8, 0.247059 )
+border_color = Color( 0.8, 0.8, 0.8, 0.0627451 )
+expand_margin_bottom = 1.0
+anti_aliasing = false
 
 [node name="ModReplayer" type="Control"]
 anchor_right = 1.0
@@ -160,54 +162,51 @@ margin_top = 190.0
 margin_right = 479.0
 margin_bottom = 214.0
 custom_constants/separation = 0
-__meta__ = {
-"_edit_group_": true
-}
 
-[node name="Ch1" type="Label" parent="ChannelLabels"]
+[node name="0" type="CheckBox" parent="ChannelLabels"]
 margin_right = 104.0
 margin_bottom = 24.0
 rect_min_size = Vector2( 104, 24 )
+custom_icons/checked = ExtResource( 7 )
 custom_styles/normal = SubResource( 4 )
 custom_fonts/font = ExtResource( 6 )
 text = "Channel 1"
 align = 1
-valign = 1
 
-[node name="Ch2" type="Label" parent="ChannelLabels"]
+[node name="1" type="CheckBox" parent="ChannelLabels"]
 margin_left = 104.0
 margin_right = 208.0
 margin_bottom = 24.0
 rect_min_size = Vector2( 104, 24 )
+custom_icons/checked = ExtResource( 7 )
 custom_styles/normal = SubResource( 4 )
 custom_fonts/font = ExtResource( 6 )
 text = "Channel 2"
 align = 1
-valign = 1
 
-[node name="Ch3" type="Label" parent="ChannelLabels"]
+[node name="2" type="CheckBox" parent="ChannelLabels"]
 margin_left = 208.0
 margin_right = 312.0
 margin_bottom = 24.0
 rect_min_size = Vector2( 104, 24 )
+custom_icons/checked = ExtResource( 7 )
 custom_styles/normal = SubResource( 4 )
 custom_fonts/font = ExtResource( 6 )
 text = "Channel 3"
 align = 1
-valign = 1
 
-[node name="Ch4" type="Label" parent="ChannelLabels"]
+[node name="3" type="CheckBox" parent="ChannelLabels"]
 margin_left = 312.0
 margin_right = 416.0
 margin_bottom = 24.0
 rect_min_size = Vector2( 104, 24 )
+custom_icons/checked = ExtResource( 7 )
 custom_styles/normal = SubResource( 4 )
 custom_fonts/font = ExtResource( 6 )
 text = "Channel 4"
 align = 1
-valign = 1
 
-[node name="Pattern" parent="." instance=ExtResource( 7 )]
+[node name="Pattern" parent="." instance=ExtResource( 8 )]
 anchor_right = 0.0
 anchor_bottom = 0.0
 margin_left = 50.0

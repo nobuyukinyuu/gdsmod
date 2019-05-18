@@ -30,8 +30,15 @@ func _ready():
 	buf = $Player.get_stream_playback()
 	module.playback_rate = $Player.stream.mix_rate
 
+	for i in 4:
+		var p:CheckBox = $ChannelLabels.get_node(str(i))
+		p.connect("toggled", self, "mute_channel", [i])
+
 	$Pattern.bind(module)
 	_on_FileDialog_file_selected("res://test.mod")
+
+func mute_channel(isMuted, channel):
+	module.channels[channel].muted = isMuted
 
 func _process(delta):
 	#Do fill buffer if song is playing and it is requested.
@@ -222,6 +229,7 @@ class Sample:
 class Note:
 	var instrument = 0
 	var period = 0 
+	var lookup_index = 0  #index in the period table. Useful for arps and pitch slides
 	var volume = 64
 	var effect = ""
 	var parameter = 0
@@ -276,6 +284,8 @@ class Note:
 
 #Playback channel
 class Channel:
+	var muted = false
+	
 	var pos = 0  #Carat position in sample
 	var lastNote:Note
 	var note:Note
@@ -284,32 +294,63 @@ class Channel:
 	var iteration_amt = 0  #How much to iterate position on next sampling
 
 	#Working note / active tick modifiers
-	var volume_mod = 0
-	var pitch_mod = 1.0
+	var effect_memory = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] #16 effects
+	var working_volume = 0
+	var original_period = 0
+	var working_period = 0
 	var working_effect = "0"
-	var working_parameter = 0
+	var working_parameter = 0   #is this needed anymore?  Used for effect memory
 	
+	#Processes a new note.
+	func new_note(n):
+		lastNote = self.note
+		note = n
 
+		working_effect = note.effect
+		
+		#Renew note memory.
+		if note.parameter > 0:
+			effect_memory[note.effect.hex_to_int()] = note.parameter
+
+		#Hints to reset the volume of this note.
+		if note.period > 0 or note.instrument > 0:
+			if note.period > 0:
+				working_period = note.period
+				original_period = note.period
+#				if not working_effect == "3": #Don't reset phase if tone portamento
+#					iteration_amt = 0
+				iteration_amt = 0
+
+			if currentSample == null:
+				working_volume = 0
+			else:
+				working_volume = currentSample.volume
+		else:
+			working_period = original_period
+
+	#Gets the next sample frame on this channel.
 	func nextSample(playback_rate=44100.0, peek=false):
 		if !note or !currentSample:  return Vector2.ZERO
-		if peek:  return currentSample.sample_at_position(pos)
+		var samp = currentSample.sample_at_position(pos)
+		if peek:  return samp
 
-		var nextIteration = note.get_sample_rate() / playback_rate
+		#Calculate the period cycling amount and then iterate
+#		var nextIteration = note.get_sample_rate() / playback_rate
+		var nextIteration 
+		var validPeriod = 1
+		nextIteration = global.get_sample_rate(working_period) / playback_rate
 		if nextIteration != 0:  
 			iteration_amt = nextIteration
+		else: #Arpeggio out of range.  Silence the sample.
+#			iteration_amt = 0
+			validPeriod = 0
 		pos += iteration_amt
 		
-		#TODO:  modify period based on effect changes
-		var samp = currentSample.sample_at_position(pos)
 		#Modify volume.
-		if working_effect == "C":  #Set volume
-			samp *= (volume_mod/64.0)
-		elif working_effect == "A":  #Volume slide.
-			samp *= clamp(currentSample.volume + volume_mod, 0, 64) / 64.0
-		#TODO:  implement effects 5/6
-		else:  #Not under a volume command.  Use default volume.
-			samp * (currentSample.volume/64.0)
-			
+		samp *= (validPeriod*working_volume/64.0)
+
+		#TODO:  modify period/pitch based on effect changes
+
 		return samp
 	
 
@@ -466,10 +507,16 @@ class Module:
 					
 					note.parameter = note_w & 0xFF
 					note.effect = global.int2hex((note_w >>8) & 0xF)
-					note.period = (note_w>>16) & 0xFFF
-	
-					#TODO: reinterpret Cxx as vol command and convert to linear float
-					#TODO: lookup note in period table and assign it.
+					note.period = (note_w>>16) & 0xFFF	
+#					note.lookup_index = global.period_table.find(note.period)
+
+					var pt = global.period_table
+					note.lookup_index = global.bsearch_closest(pt, 0,
+																pt.size()-1, note.period)
+#					if note.lookup_index == -1:
+#						print("wtf")
+
+					#TODO: reinterpret Cxx as vol command and convert to linear float?
 					rowdata.append(note)
 				pattern.append(rowdata)
 			patterns.append(pattern)
@@ -502,10 +549,7 @@ class Module:
 
 		if frames == 0:  #First tick.  Make sure there's data here
 			process_tick(0)
-#			for i in 4:
-#				var note = patterns[orders[0]] [0] [i]
-#				channels[i].note = note
-#				channels[i].currentSample = sampleBank[note.instrument-1]
+
 
 		frames += nFrames
 
@@ -515,6 +559,7 @@ class Module:
 		while nFrames > 0:
 			var framedata = Vector2.ZERO
 			for i in channels.size():
+				if channels[i].muted:  continue
 				var next_sample= channels[i].nextSample(playback_rate)
 				next_sample /= channels.size()  #Lower the volume to mix.
 				#Mix the 4 channels together.
@@ -534,6 +579,7 @@ class Module:
 
 	#Changes the channel information for the next tick when retreiving info for buf
 	func process_tick(jump_forward=1):
+		#Process standard tick jump-forward.
 		tick += jump_forward
 		if tick >= speed:
 			#Next row.
@@ -552,71 +598,92 @@ class Module:
 			frames = 0
 			emit_signal("pattern_changed", position, patterns[orders[position]])
 
-		#A previous row performed a position jump or pattern break.
+		#A previous row performed a position jump or pattern break.  Process it.
 		if break_to_position and tick ==0:
-			var position_changed = position == break_to_position.position
+			var position_changed = (position == break_to_position.position)
 
 			position = break_to_position.position
 			row = break_to_position.row
 			tick = break_to_position.tick
 			
 			if break_to_position.should_emit_signal:
-				if position_changed:
-					emit_signal("pattern_changed", position, 
-								 patterns[orders[position]])
+#				if position_changed:
+#					emit_signal("pattern_changed", position, 
+#								 patterns[orders[position]])
+				emit_signal("pattern_changed", position, patterns[orders[position]])
 				emit_signal("row_changed", row)
 			break_to_position = null
 
 
 		for i in 4:   #Process each channel
 			var note = patterns[orders[position]] [row] [i]
-			if tick ==0:  #Process next row.
-				var last = channels[i].note
-				channels[i].lastNote = last
-				channels[i].note = note
-
-#				if note != channels[i].lastNote:  #Stop if still on the same tick
-				if last and note.period > 0 and note.period != last.period:
-					#Period value changed.  Reset channel carat position.
+	
+			if tick ==0:  #Row changed.  Process new notes.
+				#First change samples if a new note was played.
+				if note.instrument > 0 and note.period > 0:  
+					channels[i].currentSample = sampleBank[note.instrument-1]
 					channels[i].pos = 0
 					channels[i].iteration_amt = 0
-				if note.instrument > 0:  #Change samples, the instrument changed.
-					channels[i].currentSample = sampleBank[note.instrument-1]
 
-					if note.period != 0:
-						channels[i].pos = 0
-						channels[i].iteration_amt = 0
-					else:
-						#No note here, but instrument.  Reset volume
-						channels[i].volume_mod = 0
-#			if note.instrument > 0 and note.period == 0:  channels[i].volume_mod = 0
-					
-			process_tick_fx(i)  #Happens every tick.
+				#Then, process the new note before processing effects.
+				#This sets up the working volumes and effect memory.
+				channels[i].new_note(note)
+
+			process_tick_fx(i, tick)  #Happens every tick.
+
 
 	#Called during a tick process, this updates a channel's working data.
-	func process_tick_fx(channel):
+	func process_tick_fx(channel, tick=0):
 		var ch = channels[channel]
 		var note = ch.note
 		
 		if !note:  return
 		
-		#TODO:  determine if the effect param continues from a previous row.
-		if note.effect != "0":  ch.working_effect = note.effect
+		#0 is the default effect so we can't assume it's valid.
+		#This is processed in Channel.new_note() now.
+#		if note.effect != "0":  ch.working_effect = note.effect
 		
 		match note.effect:
 			"0":  #Arpeggio
 				if note.parameter == 0:  #No effect.  Reset working effect.
-					ch.working_effect = "0"
-					ch.volume_mod = 0
-					#Note: Don't reset params here.  Only the working effect.
-
+					ch.working_effect = "0"					
+#					ch.working_period = ch.original_period
 				else: #Do arpeggio.
-					pass #TODO
-					
+					var offset = 0
+					match tick%3: #tick*3/speed:
+						0:  #Original pitch
+							ch.working_period = ch.original_period
+						1:  
+							var x = note.parameter >> 4
+							offset=note.lookup_index + x
+							if offset >= global.period_table.size():
+								ch.working_period = 0
+							else:
+								ch.working_period = global.period_table[offset]
+						2:
+							var y = note.parameter & 0xF
+							offset=note.lookup_index + y
+							if offset >= global.period_table.size():
+								ch.working_period = 0
+							else:
+								ch.working_period = global.period_table[offset]
+
+
+
 			"1":  #Portamento up
-				pass
+				var param = note.parameter
+				if param == 0:  param = ch.effect_memory[note.effect.hex_to_int()]
+				var x = param >> 4
+				var y = param & 0xF
+				#TODO:  Change period values here
+
 			"2":  #Portamento down
-				pass
+				var param = note.parameter
+				if param == 0:  param = ch.effect_memory[note.effect.hex_to_int()]
+				var x = param >> 4
+				var y = param & 0xF
+				#TODO:  Change period values here
+
 			"3":  #Tone Portamento
 				pass
 			"4":  #Vibrato
@@ -632,17 +699,21 @@ class Module:
 			"9":  #Set sample offset
 				var x = note.parameter >> 4
 				var y = note.parameter & 0xF
-				note.pos = x*4096 + y*256
+				ch.pos = x*4096 + y*256
 
 			"A":  #Volume slide
-				var x = note.parameter >> 4
-				var y = note.parameter & 0xF
+				#In ProTracker format, Axx does NOT have effect memory.  Ignore.
+				#More info:  https://wiki.multimedia.cx/index.php/Protracker_Module
+				var param = note.parameter
+#				if param == 0:  param = ch.effect_memory[note.effect.hex_to_int()]
+				var x = param >> 4
+				var y = param & 0xF
 				if x>0:   
-					#If both columns are nonzero, it's technically ndefined behavior.
+					#If both columns are nonzero, it's technically undefined behavior.
 					#modformat.txt says we should slide up anyway.
-					ch.volume_mod = max(64, ch.volume_mod + x)
+					ch.working_volume = min(64, ch.working_volume + x)
 				elif y>0:
-					ch.volume_mod = min(0, ch.volume_mod - y)
+					ch.working_volume = max(0, ch.working_volume - y)
 
 				
 				pass
@@ -655,18 +726,15 @@ class Module:
 				break_to_position = pos
 				
 			"C":  #Set volume
-				ch.volume_mod = note.parameter
+				ch.working_volume = note.parameter
 
 			"D":  #Pattern Break
-				var x = note.parameter >> 4
-				var y = note.parameter & 0xF
-
 				#Queue jump for next time tick == 0
 				var pos = ModPosition.new()
 				
 				pos.should_emit_signal = true
 				pos.position = position + 1
-				pos.row = x*10+y
+				pos.row = note.parameter
 				break_to_position = pos
 				
 
