@@ -705,9 +705,10 @@ class Module:
 			"8":  #ProTracker:  Unused.  /  FastTracker:  Set Pan
 				pass
 			"9":  #Set sample offset
-				var x = note.parameter >> 4
-				var y = note.parameter & 0xF
-				ch.pos = x*4096 + y*256
+				if tick == 0:
+					var x = note.parameter >> 4
+					var y = note.parameter & 0xF
+					ch.pos = x*4096 + y*256
 
 			"A":  #Volume slide
 				#In ProTracker format, Axx does NOT have effect memory.  Ignore.
