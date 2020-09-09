@@ -110,13 +110,13 @@ func _draw():
 		draw_line(Vector2(x, 0), Vector2(x,TILE_SIZE.y*64), ColorN(\"darkgray\", 0.5))
 	
 	#Draw row labels.  Assume column is 12chars large.
-	for i in 64:
-		var label_fg = ColorN(\"yellow\") if i % 4 == 0 else ColorN(\"gray\")
+	for j in 64:
+		var label_fg = ColorN(\"yellow\") if j % 4 == 0 else ColorN(\"gray\")
 
-		if i % 4 == 0:
-			draw_rect(Rect2(0, i*TILE_SIZE.y, fullwidth, TILE_SIZE.y), ColorN(\"black\", 0.25))
+		if j % 4 == 0:
+			draw_rect(Rect2(0, j*TILE_SIZE.y, fullwidth, TILE_SIZE.y), ColorN(\"black\", 0.25))
 
-		draw_string(font, Vector2(0, i*TILE_SIZE.y), str(i).pad_zeros(2), label_fg)
+		draw_string(font, Vector2(0, j*TILE_SIZE.y), str(j).pad_zeros(2), label_fg)
 
 	#Draw pattern.
 		if patternStrings !=null:

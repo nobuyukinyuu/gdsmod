@@ -61,7 +61,7 @@ func packbits(bits):
 
 #Converts decimal integer to a hex string.
 func int2hex(n, pad=0):
-	assert typeof(n) == TYPE_INT
+	assert (typeof(n) == TYPE_INT)
 	var hexaDeciNum:PoolByteArray = PoolByteArray([])
 	
 	if n == 0: hexaDeciNum.append(48)

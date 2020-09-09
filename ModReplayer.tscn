@@ -96,8 +96,8 @@ mode = 0
 access = 2
 filters = PoolStringArray( "*.mod", "" )
 show_hidden_files = true
-current_dir = "D:/Projects/godot/Code/gdsmod"
-current_path = "D:/Projects/godot/Code/gdsmod/"
+current_dir = "/Projects/godot/Code/gdsmod"
+current_path = "/Projects/godot/Code/gdsmod/"
 
 [node name="Buttons" type="HBoxContainer" parent="."]
 margin_left = 32.0
