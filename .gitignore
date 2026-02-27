@@ -20,4 +20,4 @@ export_presets.cfg
 
 workfiles/*
 addons/
-ref/
+refs/
